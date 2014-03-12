@@ -1,4 +1,5 @@
 go-dna
 ======
 
-Golang library for encoding data as DNA
+golang library for encoding information in DNA
+

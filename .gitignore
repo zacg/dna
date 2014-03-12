@@ -20,3 +20,5 @@ _cgo_export.*
 _testmain.go
 
 *.exe
+dna.sublime-workspace
+dna.sublime-project
