@@ -1,4 +1,4 @@
-package main
+package dna
 
 import (
 	"bytes"
@@ -10,22 +10,10 @@ import (
 	"unicode/utf8"
 )
 
-func main() {
-
-	fmt.Println(huffmanEncode("test"))
-	fmt.Println(EncodeDNA("test"))
-
-}
-
-func strToInt(str string) int {
-	result, _ := strconv.Atoi(str)
-	return result
-}
-
 func EncodeDNA(input string) string {
 	trits := huffmanEncode(input)
 	n := len(trits)
-	s2 := strconv.Itoa(n)
+	s2 := base10toBase3str(n)
 
 	for len(s2) < 20 {
 		s2 = "0" + s2
@@ -41,13 +29,17 @@ func EncodeDNA(input string) string {
 		s3 += "0"
 		s4 = trits + s3 + s2
 	}
-
+	fmt.Println("s3", s3)
+	fmt.Println("len(s4)", len(s4))
+	fmt.Println("s4", s4)
 	s5 := base3ToDNA(s4)
 
 	//s5 = nucleotides (nt)
 
 	//1.5
 	N := len(s5)
+	fmt.Println("s5", s5)
+	fmt.Println("n", n)
 	//ID := "10" // 2 trit identifier for orig input unique to runtime
 	//TODO: this will break if s5 < 75
 	segment_length := (N / 25) - 3
@@ -59,18 +51,19 @@ func EncodeDNA(input string) string {
 
 		pos := index * 25
 		end := pos + 100
-		if end > (len(s5) - 1) {
-			end = len(s5) - 1
-		}
+		// if end > (len(s5) - 1) {
+		// 	end = len(s5) - 1
+		// }
 
 		segments[index] = s5[pos:end]
+		fmt.Println("f", index, segments[index])
 		index++
 	}
 
 	for index, segment := range segments {
-		if index%2 != 0 {
+		if index != 0 && index%2 != 0 {
 			segments[index] = ReverseComplement(segments[index])
-
+			fmt.Println("f", index, segments[index])
 		}
 
 		i3 := base10toBase3str(index)
@@ -81,15 +74,22 @@ func EncodeDNA(input string) string {
 
 		//TODO: id should be computed per file and be unqiue
 		// per encoding batch
-		id := "10"
-		//p := strToInt(id) + int(i3[1])
-		p := (strToInt(id) + int(i3[1]) + int(i3[3]) + int(i3[5]) + int(i3[7]) + int(i3[9]) + int(i3[11])) % 3
+		id := "12"
+		fmt.Println("i3", i3)
+		//Odd trits non-zero indexed
+		p := (int(id[1-1]) + int(i3[1-1]) + int(i3[3-1]) + int(i3[5-1]) + int(i3[7-1]) + int(i3[9-1]) + int(i3[11-1])) % 3
+		fmt.Println("p", p)
 		ix := id + i3 + strconv.Itoa(p)
+		fmt.Println("ix", ix)
 		//append dna encoded ix to fi
 		//start with last char of existing Fi o get Fi'
-		seed, _ := utf8.DecodeLastRuneInString(segment)
-		fiComp := segment + base3ToDNAStart(ix, seed)
+		seed, _ := utf8.DecodeLastRuneInString(segments[index])
+		fmt.Println("seed", seed)
+		ixe := base3ToDNAStart(ix, seed)
+		fmt.Println("ix encoded", ixe)
+		fiComp := segment + ixe
 
+		fmt.Println("fi'", index, fiComp)
 		//1.9 prepend AT and append CG to mark
 		//rand.Seed(42)
 
@@ -119,12 +119,29 @@ func EncodeDNA(input string) string {
 			}
 		}
 
+		segments[index] = fiComp
+
 	}
 
-	return s5
+	return strings.Join(segments, "")
 }
 
 func DecodeDNA(dna string) string {
+	if len(dna)%117 != 0 {
+		panic("Invalid dna sequence")
+	}
+
+	segments := make([]string, len(dna)/117)
+	for i := 0; i < len(dna)-117; i += 117 {
+		start := i * 117
+		segments[i] = dna[start : start+117]
+
+		//check for A|T or C|G and remove
+
+	}
+
+	fmt.Println("len", len(segments))
+
 	return "blah"
 }
 
@@ -136,11 +153,10 @@ func ReverseComplement(dna string) string {
 		'G': 'C',
 		'T': 'A',
 	}
-
+	runes := []rune(dna)
 	var result bytes.Buffer
-	for _, rune := range dna {
-		//TODO: this should iterate backwards
-		result.WriteRune(complement[rune])
+	for i := len(runes) - 1; i >= 0; i -= 1 {
+		result.WriteRune(complement[runes[i]])
 	}
 
 	return result.String()
@@ -164,7 +180,6 @@ func base3ToDNAStart(base3 string, start rune) string {
 	prev := '0'
 	for index, r := range base3 {
 		if index == 0 {
-			fmt.Println("rune", r)
 			temp := dnaTable[start][r]
 			result.WriteRune(temp)
 			prev = temp
@@ -172,7 +187,6 @@ func base3ToDNAStart(base3 string, start rune) string {
 		}
 
 		next := dnaTable[prev][r]
-		//fmt.Println("next", next)
 		result.WriteRune(next)
 		prev = next
 	}
@@ -204,20 +218,13 @@ func initializeDict() {
 }
 
 //Encodes a string to base3 using huffman
-//digits referred to as 'trit'
 func huffmanEncode(input string) string {
 	//load dict file
 	initializeDict()
 	var result bytes.Buffer
-	//var str string = "Hello"
-	//u //nicodeCodePoints := []int(str)
-	var test string = "test"
-	iis := []byte(test)
-
-	for _, char := range iis {
+	for _, char := range input {
 		result.WriteString(hDict[int(char)])
 	}
-
 	return result.String()
 }
 
