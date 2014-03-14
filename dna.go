@@ -91,7 +91,6 @@ func EncodeDNA(input string) string {
 
 		fmt.Println("fi'", index, fiComp)
 		//1.9 prepend AT and append CG to mark
-		//rand.Seed(42)
 
 		if fiComp[0] == 'A' {
 			fiComp = "T" + fiComp
@@ -131,18 +130,102 @@ func DecodeDNA(dna string) string {
 		panic("Invalid dna sequence")
 	}
 
+	dnaTritTbl := map[byte]map[byte]byte{
+		'A': {'T': '0', 'G': '1', 'C': '2'},
+		'C': {'A': '0', 'T': '1', 'G': '2'},
+		'G': {'C': '0', 'A': '1', 'T': '2'},
+		'T': {'G': '0', 'C': '1', 'A': '2'},
+	}
+
 	segments := make([]string, len(dna)/117)
-	for i := 0; i < len(dna)-117; i += 117 {
+	for i := 0; i < len(segments); i++ {
+		fmt.Println("loop", i)
 		start := i * 117
-		segments[i] = dna[start : start+117]
+		end := start + 117
 
-		//check for A|T or C|G and remove
+		fmt.Println("start", start)
+		fmt.Println("end", end)
+		segment := dna[start:end]
+		fmt.Println("cut seg", segment)
 
+		//check for reverse complement
+		if segment[0] != 'T' && segment[0] != 'A' {
+			segment = ReverseComplement(segment)
+		}
+
+		//Trim A|T or C|G
+		segment = segment[1:116]
+
+		//recreate ix and fi
+		ix := segment[len(segment)-15:]
+		Fi := segment[:len(segment)-15]
+
+		fmt.Println("ix %v len %v", ix, len(ix))
+		fmt.Println("Fi %v len %v", Fi, len(Fi))
+
+		// # Convert ix to trits (IX)
+		lastFi := Fi[len(Fi)-1]
+
+		IX := string(dnaTritTbl[ix[0]][lastFi])
+		for x := 1; x < 15; x++ {
+			IX += string(dnaTritTbl[ix[x]][ix[x-1]])
+		}
+
+		fmt.Println("IX", IX)
+
+		//Extract ID
+		ID := IX[:2]
+
+		fmt.Println("ID", ID)
+
+		//#Extract i3 and i
+		i3 := IX[2 : len(IX)-1]
+		extractedI := base3toBase10(i3)
+
+		fmt.Println("i", extractedI)
+
+		//parity check
+		//temp := strconv.Itoa(IX[len(IX)-1])
+		P, _ := strconv.Atoi(string(IX[len(IX)-1]))
+		//P := utf8.DecodeRuneInString(IX[len(IX)-1])
+		Pexpected := (int(ID[1-1]) + int(i3[1-1]) + int(i3[3-1]) +
+			int(i3[5-1]) + int(i3[7-1]) + int(i3[9-1]) + int(i3[11-1])) % 3
+
+		fmt.Println("P", P)
+		fmt.Println("Pexpected", Pexpected)
+
+		if P != Pexpected {
+			//panic("Corrupted segment:\nID = %s\ni = %d")
+			panic("corrupt segment " + strconv.Itoa(P) + " " + strconv.Itoa(Pexpected))
+		} else {
+			//reverse complement odd fi
+			if extractedI%2 == 1 {
+				segment = ReverseComplement(Fi)
+				fmt.Println("segment '", segment)
+			} else {
+				segment = Fi
+			}
+		}
+
+		fmt.Println("segment output", segment)
+		segments[i] = segment
 	}
 
 	fmt.Println("len", len(segments))
 
-	return "blah"
+	//process back to s0
+
+	return fiToS5(segments)
+}
+
+func fiToS5(fi []string) string {
+	fmt.Println("len(fi)", len(fi))
+	fmt.Println("len(fi)[0]", len(fi[1]))
+	s5 := fi[0][0:75]
+	for _, segment := range fi {
+		s5 += segment[len(segment)-25:]
+	}
+	return s5
 }
 
 //Returns reverse complement of specified DNA string
@@ -201,9 +284,9 @@ func initializeDict() {
 		return
 	}
 
-	content, err := ioutil.ReadFile("/home/zac/dev/go/src/go-dna/huff3.dict")
+	content, err := ioutil.ReadFile("/home/zac/dev/go/src/github.com/zacg/dna/huff3.dict")
 	if err != nil {
-		panic("io error")
+		panic("io error" + err.Error())
 	}
 	lines := strings.Split(string(content), "\n")
 	hDict = make(map[int]string, len(lines))
@@ -236,4 +319,24 @@ func base10toBase3str(num int) string {
 		num = num / 3
 	}
 	return digits
+}
+
+func base3toBase10(input string) int {
+	n, err := strconv.Atoi(input)
+	if err != nil {
+		panic("invalid base3 number")
+	}
+	if n == 0 {
+		return 0
+	}
+
+	res := 0
+	b := 1
+	for n != 0 {
+		res = res + (n%10)*b
+		n = n / 10
+		b = 3 * b
+	}
+
+	return res
 }
