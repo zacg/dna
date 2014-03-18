@@ -60,7 +60,7 @@ func EncodeDNA(input string) string {
 		index++
 	}
 
-	for index, segment := range segments {
+	for index, _ := range segments {
 		if index != 0 && index%2 != 0 {
 			segments[index] = ReverseComplement(segments[index])
 			fmt.Println("f", index, segments[index])
@@ -87,7 +87,7 @@ func EncodeDNA(input string) string {
 		fmt.Println("seed", seed)
 		ixe := base3ToDNAStart(ix, seed)
 		fmt.Println("ix encoded", ixe)
-		fiComp := segment + ixe
+		fiComp := segments[index] + ixe
 
 		fmt.Println("fi'", index, fiComp)
 		//1.9 prepend AT and append CG to mark
@@ -98,6 +98,7 @@ func EncodeDNA(input string) string {
 			fiComp = "A" + fiComp
 		} else {
 			//choose at random
+			fmt.Println("choosing randmon AT")
 			if rand.Intn(1) == 0 {
 				fiComp = "T" + fiComp
 			} else {
@@ -110,6 +111,7 @@ func EncodeDNA(input string) string {
 		} else if fiComp[len(fiComp)-1] == 'G' {
 			fiComp += "C"
 		} else {
+			fmt.Println("choosing random GC")
 			//choose at random
 			if rand.Intn(1) == 0 {
 				fiComp += "G"
@@ -117,6 +119,8 @@ func EncodeDNA(input string) string {
 				fiComp += "C"
 			}
 		}
+
+		fmt.Println("adjusted ficomp", fiComp)
 
 		segments[index] = fiComp
 
