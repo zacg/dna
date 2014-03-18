@@ -129,16 +129,16 @@ func EncodeDNA(input string) string {
 	return strings.Join(segments, "")
 }
 
+var dnaTritTbl = map[byte]map[byte]byte{
+	'A': {'T': '0', 'G': '1', 'C': '2'},
+	'C': {'A': '0', 'T': '1', 'G': '2'},
+	'G': {'C': '0', 'A': '1', 'T': '2'},
+	'T': {'G': '0', 'C': '1', 'A': '2'},
+}
+
 func DecodeDNA(dna string) string {
 	if len(dna)%117 != 0 {
 		panic("Invalid dna sequence")
-	}
-
-	dnaTritTbl := map[byte]map[byte]byte{
-		'A': {'T': '0', 'G': '1', 'C': '2'},
-		'C': {'A': '0', 'T': '1', 'G': '2'},
-		'G': {'C': '0', 'A': '1', 'T': '2'},
-		'T': {'G': '0', 'C': '1', 'A': '2'},
 	}
 
 	segments := make([]string, len(dna)/117)
@@ -218,8 +218,10 @@ func DecodeDNA(dna string) string {
 	fmt.Println("len", len(segments))
 
 	//process back to s0
-
-	return fiToS5(segments)
+	s5 := fiToS5(segments)
+	s4 := s5Tos4(s5)
+	s0 := s4Tos0(s4)
+	return s0
 }
 
 func fiToS5(fi []string) string {
@@ -230,6 +232,36 @@ func fiToS5(fi []string) string {
 		s5 += segment[len(segment)-25:]
 	}
 	return s5
+}
+
+func s5Tos4(s5 string) string {
+
+	bytes := []byte(s5)
+	s4 := make([]byte, len(s5)+1)
+	for x := len(s5) - 1; x > 1; x-- {
+		s4[x] = dnaTritTbl[bytes[x]][bytes[x-1]]
+	}
+	s4[1] = dnaTritTbl[bytes[1]][bytes[len(bytes)-1]]
+	s4[0] = dnaTritTbl[bytes[0]]['A']
+
+	fmt.Println("s4", s4)
+	return string(s4)
+}
+
+func s4Tos0(s4 string) string {
+	//last 20 trits = s2
+	s2 := s4[len(s4)-20:]
+
+	// n = len(s1)
+	n := base3toBase10(s2)
+
+	// first n trits make up s1
+	s1 := s4[:n]
+
+	//convert trits to data using huffman
+	s0 := huffmanDecode(s1)
+
+	return s0
 }
 
 //Returns reverse complement of specified DNA string
@@ -315,6 +347,32 @@ func huffmanEncode(input string) string {
 	return result.String()
 }
 
+func huffmanDecode(input string) string {
+	//load dict file
+	initializeDict()
+	//build inverse dict
+	invDict := make(map[string]int)
+	for key, value := range hDict {
+		invDict[value] = key
+	}
+
+	var result bytes.Buffer
+	x := 0
+	for x < len(input) {
+		//result.WriteString(hDict[int(char)])
+		if val, ok := invDict[input[x:x+5]]; ok {
+			result.WriteByte(byte(val))
+			x += 5
+		} else {
+			result.WriteByte(byte(invDict[input[x:x+6]]))
+			x += 6
+		}
+
+		//result.Write(invDict[char])
+	}
+	return result.String()
+}
+
 func base10toBase3str(num int) string {
 	digits := ""
 	for num > 0 {
@@ -326,8 +384,14 @@ func base10toBase3str(num int) string {
 }
 
 func base3toBase10(input string) int {
+	//TODO: this can be removed when utf code cleaned up
+	input = strings.TrimRight(input, "\x00")
+
 	n, err := strconv.Atoi(input)
+
 	if err != nil {
+		fmt.Println("input %s", input)
+		fmt.Println(err.Error())
 		panic("invalid base3 number")
 	}
 	if n == 0 {
