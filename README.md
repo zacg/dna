@@ -7,3 +7,15 @@ The algorithm is based on the method described in this Nature paper: http://www.
 
 Inspired by Allan Costa's python implementation: https://github.com/allanino/DNA
 
+Example:
+
+Encoding:
+	str := "some string to encode in DNA"
+	dna := dna.EncodeDNA(str)
+	fmt.Println("Result: ", dna)
+
+Decoding:
+	dna := "ATAGTATATCGACTAGTACAGCGTAGCATCTCGCAGCGAGATACGCTGCTACGCAGCATGCTGTGAGTATCGATGACGAGTGACTCTGTACAGTACGTACGATACGTACGTACGTCGTATAGTCGTACGTACGTACGTACGTACGTACGTACTGTACAGAGTCACTCGTCATCGATACTCACAGCATGCTGCGTAGCAGCGTATCTCGCTGCGAGATGATACGTACGTACGAGC"
+
+	str := dna.DecodeDNA(dna)
+	fmt.Println("Result",str)
