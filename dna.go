@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-func EncodeDNA(input string) string {
+func Encode(input string) string {
 	trits := huffmanEncode(input)
 	n := len(trits)
 	s2 := base10toBase3str(n)
@@ -136,7 +136,7 @@ var dnaTritTbl = map[byte]map[byte]byte{
 	'T': {'G': '0', 'C': '1', 'A': '2'},
 }
 
-func DecodeDNA(dna string) string {
+func Decode(dna string) string {
 	if len(dna)%117 != 0 {
 		panic("Invalid dna sequence")
 	}
