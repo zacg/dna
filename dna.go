@@ -2,7 +2,6 @@ package dna
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"strconv"
