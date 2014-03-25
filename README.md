@@ -1,4 +1,4 @@
-go-dna
+go dna
 ======
 
 golang library for encoding/decoding information in DNA.

@@ -29,41 +29,26 @@ func Encode(input string) string {
 		s3 += "0"
 		s4 = trits + s3 + s2
 	}
-	fmt.Println("s3", s3)
-	fmt.Println("len(s4)", len(s4))
-	fmt.Println("s4", s4)
-	s5 := base3ToDNA(s4)
 
-	//s5 = nucleotides (nt)
+	s5 := base3ToDNA(s4)
 
 	//1.5
 	N := len(s5)
-	fmt.Println("s5", s5)
-	fmt.Println("n", n)
-	//ID := "10" // 2 trit identifier for orig input unique to runtime
-	//TODO: this will break if s5 < 75
+
 	segment_length := (N / 25) - 3
-	fmt.Println("segment len", segment_length)
 	segments := make([]string, segment_length)
 
 	index := 0
 	for index < segment_length {
-
 		pos := index * 25
 		end := pos + 100
-		// if end > (len(s5) - 1) {
-		// 	end = len(s5) - 1
-		// }
-
 		segments[index] = s5[pos:end]
-		fmt.Println("f", index, segments[index])
 		index++
 	}
 
 	for index, _ := range segments {
 		if index != 0 && index%2 != 0 {
 			segments[index] = ReverseComplement(segments[index])
-			fmt.Println("f", index, segments[index])
 		}
 
 		i3 := base10toBase3str(index)
@@ -75,21 +60,17 @@ func Encode(input string) string {
 		//TODO: id should be computed per file and be unqiue
 		// per encoding batch
 		id := "12"
-		fmt.Println("i3", i3)
+
 		//Odd trits non-zero indexed
 		p := (int(id[1-1]) + int(i3[1-1]) + int(i3[3-1]) + int(i3[5-1]) + int(i3[7-1]) + int(i3[9-1]) + int(i3[11-1])) % 3
-		fmt.Println("p", p)
 		ix := id + i3 + strconv.Itoa(p)
-		fmt.Println("ix", ix)
+
 		//append dna encoded ix to fi
 		//start with last char of existing Fi o get Fi'
 		seed, _ := utf8.DecodeLastRuneInString(segments[index])
-		fmt.Println("seed", seed)
 		ixe := base3ToDNAStart(ix, seed)
-		fmt.Println("ix encoded", ixe)
 		fiComp := segments[index] + ixe
 
-		fmt.Println("fi'", index, fiComp)
 		//1.9 prepend AT and append CG to mark
 
 		if fiComp[0] == 'A' {
@@ -98,7 +79,6 @@ func Encode(input string) string {
 			fiComp = "A" + fiComp
 		} else {
 			//choose at random
-			fmt.Println("choosing randmon AT")
 			if rand.Intn(1) == 0 {
 				fiComp = "T" + fiComp
 			} else {
@@ -111,7 +91,6 @@ func Encode(input string) string {
 		} else if fiComp[len(fiComp)-1] == 'G' {
 			fiComp += "C"
 		} else {
-			fmt.Println("choosing random GC")
 			//choose at random
 			if rand.Intn(1) == 0 {
 				fiComp += "G"
@@ -119,8 +98,6 @@ func Encode(input string) string {
 				fiComp += "C"
 			}
 		}
-
-		fmt.Println("adjusted ficomp", fiComp)
 
 		segments[index] = fiComp
 
@@ -143,14 +120,10 @@ func Decode(dna string) string {
 
 	segments := make([]string, len(dna)/117)
 	for i := 0; i < len(segments); i++ {
-		fmt.Println("loop", i)
 		start := i * 117
 		end := start + 117
 
-		fmt.Println("start", start)
-		fmt.Println("end", end)
 		segment := dna[start:end]
-		fmt.Println("cut seg", segment)
 
 		//check for reverse complement
 		if segment[0] != 'T' && segment[0] != 'A' {
@@ -164,9 +137,6 @@ func Decode(dna string) string {
 		ix := segment[len(segment)-15:]
 		Fi := segment[:len(segment)-15]
 
-		fmt.Println("ix %v len %v", ix, len(ix))
-		fmt.Println("Fi %v len %v", Fi, len(Fi))
-
 		// # Convert ix to trits (IX)
 		lastFi := Fi[len(Fi)-1]
 
@@ -175,47 +145,31 @@ func Decode(dna string) string {
 			IX += string(dnaTritTbl[ix[x]][ix[x-1]])
 		}
 
-		fmt.Println("IX", IX)
-
 		//Extract ID
 		ID := IX[:2]
-
-		fmt.Println("ID", ID)
 
 		//#Extract i3 and i
 		i3 := IX[2 : len(IX)-1]
 		extractedI := base3toBase10(i3)
 
-		fmt.Println("i", extractedI)
-
 		//parity check
-		//temp := strconv.Itoa(IX[len(IX)-1])
 		P, _ := strconv.Atoi(string(IX[len(IX)-1]))
-		//P := utf8.DecodeRuneInString(IX[len(IX)-1])
 		Pexpected := (int(ID[1-1]) + int(i3[1-1]) + int(i3[3-1]) +
 			int(i3[5-1]) + int(i3[7-1]) + int(i3[9-1]) + int(i3[11-1])) % 3
 
-		fmt.Println("P", P)
-		fmt.Println("Pexpected", Pexpected)
-
 		if P != Pexpected {
-			//panic("Corrupted segment:\nID = %s\ni = %d")
 			panic("corrupt segment " + strconv.Itoa(P) + " " + strconv.Itoa(Pexpected))
 		} else {
 			//reverse complement odd fi
 			if extractedI%2 == 1 {
 				segment = ReverseComplement(Fi)
-				fmt.Println("segment '", segment)
 			} else {
 				segment = Fi
 			}
 		}
 
-		fmt.Println("segment output", segment)
 		segments[i] = segment
 	}
-
-	fmt.Println("len", len(segments))
 
 	//process back to s0
 	s5 := fiToS5(segments)
@@ -225,8 +179,6 @@ func Decode(dna string) string {
 }
 
 func fiToS5(fi []string) string {
-	fmt.Println("len(fi)", len(fi))
-	fmt.Println("len(fi)[0]", len(fi[1]))
 	s5 := fi[0][0:75]
 	for _, segment := range fi {
 		s5 += segment[len(segment)-25:]
@@ -235,7 +187,6 @@ func fiToS5(fi []string) string {
 }
 
 func s5Tos4(s5 string) string {
-
 	bytes := []byte(s5)
 	s4 := make([]byte, len(s5)+1)
 	for x := len(s5) - 1; x > 1; x-- {
@@ -244,7 +195,6 @@ func s5Tos4(s5 string) string {
 	s4[1] = dnaTritTbl[bytes[1]][bytes[len(bytes)-1]]
 	s4[0] = dnaTritTbl[bytes[0]]['A']
 
-	fmt.Println("s4", s4)
 	return string(s4)
 }
 
@@ -368,7 +318,6 @@ func huffmanDecode(input string) string {
 			x += 6
 		}
 
-		//result.Write(invDict[char])
 	}
 	return result.String()
 }
@@ -390,8 +339,6 @@ func base3toBase10(input string) int {
 	n, err := strconv.Atoi(input)
 
 	if err != nil {
-		fmt.Println("input %s", input)
-		fmt.Println(err.Error())
 		panic("invalid base3 number")
 	}
 	if n == 0 {
